@@ -5,14 +5,15 @@ import csv
 import schedule
 import time
 import os
+from dotenv import load_dotenv
 
-Token = '6959060568:AAHAxGgnWsc6VAS_PoL8pgOOLoKk7EWglsk'
 
-bot = TeleBot(Token)
+load_dotenv()
+token = os.getenv('TOKEN')
+
+bot = TeleBot(token)
 
 nick = 'name'
-data1 = []
-data2 = []
 
 
 @bot.message_handler(commands=['start', 'menu'])
@@ -63,13 +64,19 @@ def saturday_nick_func(message):
 
 
 def saturday_remark_func(message):
-    data1.append([str(nick), str(message.text)])
-    with open('../data_list_1.csv', mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['Имя', 'Ремарка'])
-        writer.writerows(data1)
 
-    bot.send_message(message.chat.id, 'Запись прошла успешно!✅')
+    data_record = str(nick) + ',' + str(message.text) + '\n'
+    with open('data_list_1.csv', mode='a') as file:
+        file.write(data_record)
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton('Посмотреть список участников', callback_data='суббота'))
+    bot.send_message(message.chat.id, 'Запись прошла успешно!✅', reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call:True)
+def call_back(call):
+    show(call.message)
 
 
 ####################################################################################
@@ -81,11 +88,9 @@ def sunday_nick_func(message):
 
 
 def sunday_remark_func(message):
-    data2.append([str(nick), str(message.text)])
-    with open('../data_list_2.csv', mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['Имя', 'Ремарка'])
-        writer.writerows(data2)
+    data_record = str(nick) + ',' + str(message.text) + '\n'
+    with open('data_list_2.csv', mode='a') as file:
+        file.write(data_record)
 
     bot.send_message(message.chat.id, 'Запись прошла успешно!✅')
 
@@ -115,22 +120,22 @@ def rm_func(message):
 
 
 def saturday_rm(message):
-    with open('../data_list_1.csv', 'r') as file:
+    with open('data_list_1.csv', 'r') as file:
         reader = csv.reader(file)
         data_rm = list(reader)
         updated_data = [row for row in data_rm if row[0] != message.text]
-    with open('../data_list_1.csv', 'w', newline='') as file:
+    with open('data_list_1.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(updated_data)
     bot.send_message(message.chat.id, 'Вы были удалены из списка❎')
 
 
 def sunday_rm(message):
-    with open('../data_list_2.csv', 'r') as file:
+    with open('data_list_2.csv', 'r') as file:
         reader = csv.reader(file)
         data_rm = list(reader)
         updated_data = [row for row in data_rm if row[0] != message.text]
-    with open('../data_list_2.csv', 'w', newline='') as file:
+    with open('data_list_2.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(updated_data)
     bot.send_message(message.chat.id, 'Вы были удалены из списка❎')
@@ -151,13 +156,13 @@ def lst(message):
 
 def show(message):
     if message.text == 'суббота':
-        with open('../data_list_1.csv', mode='r') as file:
+        with open('data_list_1.csv', mode='r') as file:
             reader = csv.reader(file)
             for row in reader:
                 bot.send_message(message.chat.id, str(row))
 
     elif message.text == 'воскресенье':
-        with open('../data_list_2.csv', mode='r') as file:
+        with open('data_list_2.csv', mode='r') as file:
             reader = csv.reader(file)
             for row in reader:
                 bot.send_message(message.chat.id, str(row))
@@ -191,14 +196,24 @@ def reg_next_step(message):
 
 
 def clear_csv():
-    with open('../data_list_1.csv', mode='w', newline='') as file:
-        file.truncate(0)
-    with open('../data_list_2.csv', mode='w', newline='') as file:
-        file.truncate(0)
-    print("CSV файл очищен.")
+    os.remove('data_list_1.csv')
+    os.remove('data_list_2.csv')
+    init_csv_headers()
 
 
 schedule.every().monday.at("00:01").do(clear_csv)
+
+
+def init_csv_headers():
+    if not os.path.isfile('data_list_1.csv'):
+        with open('data_list_1.csv', mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Имя', 'Ремарка'])
+
+    if not os.path.isfile('data_list_2.csv'):
+        with open('data_list_2.csv', mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Имя', 'Ремарка'])
 
 
 def job_queue():
@@ -209,6 +224,7 @@ def job_queue():
 
 def main():
     bot.polling()
+    init_csv_headers()
     job_queue()
 
 

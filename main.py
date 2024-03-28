@@ -2,6 +2,7 @@ from telebot import TeleBot
 from telebot import types
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 import csv
+import pandas as pd
 import schedule
 import time
 import os
@@ -14,6 +15,16 @@ token = os.getenv('TOKEN')
 bot = TeleBot(token)
 
 nick = 'name'
+
+
+def show_saturday(message):
+    df = pd.read_csv('data_list_1.csv')
+    bot.send_message(message.chat.id, str(df))
+
+
+def show_sunday(message):
+    df = pd.read_csv('data_list_2.csv')
+    bot.send_message(message.chat.id, str(df))
 
 
 @bot.message_handler(commands=['start', 'menu'])
@@ -64,19 +75,21 @@ def saturday_nick_func(message):
 
 
 def saturday_remark_func(message):
-
     data_record = str(nick) + ',' + str(message.text) + '\n'
     with open('data_list_1.csv', mode='a') as file:
         file.write(data_record)
 
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton('Посмотреть список участников', callback_data='суббота'))
-    bot.send_message(message.chat.id, 'Запись прошла успешно!✅', reply_markup=markup)
+    markup_saturday = types.InlineKeyboardMarkup()
+    markup_saturday.add(types.InlineKeyboardButton('Посмотреть список на субботу', callback_data='show_saturday'))
+    bot.send_message(message.chat.id, 'Запись прошла успешно!✅', reply_markup=markup_saturday)
 
 
-@bot.callback_query_handler(func=lambda call:True)
+@bot.callback_query_handler(func=lambda call: True)
 def call_back(call):
-    show(call.message)
+    if call.data == "show_saturday":
+        show_saturday(call.message)
+    elif call.data == 'show_sunday':
+        show_sunday(call.message)
 
 
 ####################################################################################
@@ -92,7 +105,9 @@ def sunday_remark_func(message):
     with open('data_list_2.csv', mode='a') as file:
         file.write(data_record)
 
-    bot.send_message(message.chat.id, 'Запись прошла успешно!✅')
+    markup_sunday = types.InlineKeyboardMarkup()
+    markup_sunday.add(types.InlineKeyboardButton('Посмотреть список на воскресенье', callback_data='show_sunday'))
+    bot.send_message(message.chat.id, 'Запись прошла успешно!✅', reply_markup=markup_sunday)
 
 
 #########################################################################################
@@ -127,7 +142,10 @@ def saturday_rm(message):
     with open('data_list_1.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(updated_data)
-    bot.send_message(message.chat.id, 'Вы были удалены из списка❎')
+
+    markup_saturday = types.InlineKeyboardMarkup()
+    markup_saturday.add(types.InlineKeyboardButton('Посмотреть список на субботу', callback_data='show_saturday'))
+    bot.send_message(message.chat.id, 'Вы были удалены из списка❎', reply_markup=markup_saturday)
 
 
 def sunday_rm(message):
@@ -138,7 +156,10 @@ def sunday_rm(message):
     with open('data_list_2.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(updated_data)
-    bot.send_message(message.chat.id, 'Вы были удалены из списка❎')
+
+    markup_sunday = types.InlineKeyboardMarkup()
+    markup_sunday.add(types.InlineKeyboardButton('Посмотреть список на воскресенье', callback_data='show_saturday'))
+    bot.send_message(message.chat.id, 'Вы были удалены из списка❎', reply_markup=markup_sunday)
 
 
 #########################################################################################
@@ -156,16 +177,12 @@ def lst(message):
 
 def show(message):
     if message.text == 'суббота':
-        with open('data_list_1.csv', mode='r') as file:
-            reader = csv.reader(file)
-            for row in reader:
-                bot.send_message(message.chat.id, str(row))
+        df = pd.read_csv('data_list_1.csv')
+        bot.send_message(message.chat.id, str(df))
 
     elif message.text == 'воскресенье':
-        with open('data_list_2.csv', mode='r') as file:
-            reader = csv.reader(file)
-            for row in reader:
-                bot.send_message(message.chat.id, str(row))
+        df = pd.read_csv('data_list_2.csv')
+        bot.send_message(message.chat.id, str(df))
 
 
 #######################################################################################
@@ -175,10 +192,6 @@ def rules(message):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton('Oбучающие видео по Мафии', url='https://www.youtube.com/playlist?list=PLrDRU9lcDcit1DBV9FDKxTjbh9JRfBLma'))
     bot.send_photo(message.chat.id, file, reply_markup=markup)
-#    bot.send_message(message.chat.id, 'Правила клуба:\n'
-#                                      '\n'
-#                                      'Первое правило клуба: ')
-#ToDo
 
 
 @bot.message_handler(commands=['location'])

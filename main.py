@@ -1,12 +1,14 @@
+import json
 from telebot import TeleBot
 from telebot import types
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 import csv
 import pandas as pd
-import schedule
+from schedule import every, repeat, run_pending
 import time
 import os
 from dotenv import load_dotenv
+from multiprocessing import Process, Pool
 
 
 load_dotenv()
@@ -15,6 +17,8 @@ token = os.getenv('TOKEN')
 bot = TeleBot(token)
 
 nick = 'name'
+REMINDER_LIST_PATH_NAME = 'reminder_list.json'
+RESCHEDULE_LIST_PATH_NAME = 'reschedule.json'
 
 
 def show_saturday(message):
@@ -25,6 +29,30 @@ def show_saturday(message):
 def show_sunday(message):
     df = pd.read_csv('data_list_2.csv')
     bot.send_message(message.chat.id, str(df))
+
+
+def send_sorry_message(message):
+    bot.send_message(message.chat.id, "Очень жаль. Ждем на следующей неделе!")
+
+
+def reschedule(message):
+    if os.path.isfile(RESCHEDULE_LIST_PATH_NAME):
+        with open(RESCHEDULE_LIST_PATH_NAME, 'r') as file:
+            data = json.load(file)
+        with open(RESCHEDULE_LIST_PATH_NAME, 'w') as file:
+            if message.from_user.id not in data.keys():
+                data[str(message.chat.id)] = {
+                    'username': message.from_user.first_name,
+                    'days_until_notify': 3
+                }
+                file.write(json.dumps(data))
+    else:
+        with open(RESCHEDULE_LIST_PATH_NAME, 'w') as file:
+            data = {str(message.chat.id): {
+                'username': message.from_user.first_name,
+                'days_until_notify': 3
+            }}
+            file.write(json.dumps(data))
 
 
 @bot.message_handler(commands=['start', 'menu'])
@@ -40,9 +68,49 @@ def menu(message):
                                       '\n📃 /guide - для ознакомления с правилами игровых сессий \n'
                                       '\n📍 /location - для отображения места проведения игровых сессий \n'
                                       '\n⏰ /reminder - для установления напоминалки о записи \n'
+                                      '\n⏰ /delete_reminder - для удаления напоминалки о записи \n'
                                       '\n'
                                       'Так же, можешь воспользоваться кнопкой \'меню\' в левом нижнем углу.\n'
                                       '\nP.s: Списки обнуляются по окончанию крайнего игрового вечера, не забывайте записываться на следующие вечера🎩')
+
+
+@bot.message_handler(commands=['reminder'])
+def enter_list(message):
+    if os.path.isfile(REMINDER_LIST_PATH_NAME):
+        with open(REMINDER_LIST_PATH_NAME, 'r') as file:
+            data = json.load(file)
+        with open(REMINDER_LIST_PATH_NAME, 'w') as file:
+            if message.from_user.id not in data.keys():
+                data[str(message.chat.id)] = {
+                    'username': message.from_user.first_name
+                }
+                file.write(json.dumps(data))
+            else:
+                return
+    else:
+        with open(REMINDER_LIST_PATH_NAME, 'w') as file:
+            data = {str(message.chat.id): {
+                'username': message.from_user.first_name
+            }}
+            file.write(json.dumps(data))
+    bot.send_message(message.chat.id, 'Напоминания установлены')
+
+
+@bot.message_handler(commands=['delete_reminder'])
+def remove_from_list(message):
+
+    if os.path.isfile(REMINDER_LIST_PATH_NAME):
+        data = None
+        with open(REMINDER_LIST_PATH_NAME, 'r') as file:
+            data = json.load(file)
+        with open(REMINDER_LIST_PATH_NAME, 'w') as file:
+            if str(message.chat.id) in data.keys():
+                data.pop(str(message.chat.id))
+            if len(data) == 0:
+                os.remove(REMINDER_LIST_PATH_NAME)
+            else:
+                file.write(json.dumps(data))
+    bot.send_message(message.chat.id, 'Напоминания удалено')
 
 
 @bot.message_handler(commands=['in'])
@@ -86,10 +154,17 @@ def saturday_remark_func(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def call_back(call):
-    if call.data == "show_saturday":
-        show_saturday(call.message)
-    elif call.data == 'show_sunday':
-        show_sunday(call.message)
+    match call.data:
+        case "show_saturday":
+            show_saturday(call.message)
+        case 'show_sunday':
+            show_sunday(call.message)
+        case 'in':
+            reg(call.message)
+        case 'not':
+            send_sorry_message(call.message)
+        case 'reschedule':
+            reschedule(call.message)
 
 
 ####################################################################################
@@ -158,7 +233,7 @@ def sunday_rm(message):
         writer.writerows(updated_data)
 
     markup_sunday = types.InlineKeyboardMarkup()
-    markup_sunday.add(types.InlineKeyboardButton('Посмотреть список на воскресенье', callback_data='show_saturday'))
+    markup_sunday.add(types.InlineKeyboardButton('Посмотреть список на воскресенье', callback_data='show_sunday'))
     bot.send_message(message.chat.id, 'Вы были удалены из списка❎', reply_markup=markup_sunday)
 
 
@@ -208,13 +283,60 @@ def reg_next_step(message):
     bot.send_message(message.chat.id, 'Для грамотной навигации используйте команды из главного меню')
 
 
+@repeat(every().monday.at("00:01"))
 def clear_csv():
     os.remove('data_list_1.csv')
     os.remove('data_list_2.csv')
     init_csv_headers()
 
 
-schedule.every().monday.at("00:01").do(clear_csv)
+# @repeat(every(5).seconds)
+@repeat(every().monday.at("10:00"))
+def notify_users():
+    if os.path.isfile(REMINDER_LIST_PATH_NAME):
+        with open(REMINDER_LIST_PATH_NAME, 'r') as reminder_list_file:
+            reminder_chats = json.load(reminder_list_file)
+            for chat_id, user_info in reminder_chats.items():
+                markup_sunday = types.InlineKeyboardMarkup()
+                markup_sunday.add(
+                    types.InlineKeyboardButton('Записаться', callback_data='in'),
+                )
+                markup_sunday.add(
+                    types.InlineKeyboardButton('Не смогу :(', callback_data='not'),
+                )
+                markup_sunday.add(
+                    types.InlineKeyboardButton('Напомнить через 3 дня', callback_data='reschedule'),
+                )
+                message = f"{user_info['username']}, записывайся на игровые вечера 😄"
+                bot.send_message(chat_id, message, reply_markup=markup_sunday)
+
+
+# @repeat(every(30).seconds)
+@repeat(every().day.at("10:00"))
+def notify_in_3_days_users():
+    ids_to_be_poped = []
+    if os.path.isfile(RESCHEDULE_LIST_PATH_NAME):
+        reminder_chats = None
+        with open(RESCHEDULE_LIST_PATH_NAME, 'r') as reschedule_list_file:
+            reminder_chats = json.load(reschedule_list_file)
+
+        for chat_id, user_info in reminder_chats.items():
+            reminder_chats[str(chat_id)]['days_until_notify'] -= 1
+            user_days_left = int(user_info['days_until_notify'])
+            if user_days_left > 0:
+                continue
+            elif user_days_left == 0:
+                ids_to_be_poped.append(str(chat_id))
+                message = f"{user_info['username']}, записывайся на игровые вечера 😄"
+                bot.send_message(chat_id, message)
+        os.remove(RESCHEDULE_LIST_PATH_NAME)
+        with open(RESCHEDULE_LIST_PATH_NAME, 'w') as reschedule_list_file:
+            for chat_id in ids_to_be_poped:
+                reminder_chats.pop(chat_id)
+            if len(reminder_chats) > 0:
+                reschedule_list_file.write(json.dumps(reminder_chats))
+            else:
+                os.remove(RESCHEDULE_LIST_PATH_NAME)
 
 
 def init_csv_headers():
@@ -231,16 +353,28 @@ def init_csv_headers():
 
 def job_queue():
     while True:
-        schedule.run_pending()
+        run_pending()
         time.sleep(1)
 
 
-def main():
+def do_bot_polling():
+    print("STARTED")
     bot.polling()
+
+
+def main():
+    print("Starting the bot...")
     init_csv_headers()
-    job_queue()
+
+    notification_process = Process(target=job_queue)
+    bot_polling_process = Process(target=do_bot_polling)
+
+    bot_polling_process.start()
+    notification_process.start()
+
+    notification_process.join()
+    bot_polling_process.join()
 
 
 if __name__ == '__main__':
     main()
-

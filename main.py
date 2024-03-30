@@ -8,7 +8,8 @@ from schedule import every, repeat, run_pending
 import time
 import os
 from dotenv import load_dotenv
-from multiprocessing import Process, Pool
+# from multiprocessing import Process, Pool
+import threading
 
 
 load_dotenv()
@@ -32,7 +33,7 @@ def show_sunday(message):
 
 
 def send_sorry_message(message):
-    bot.send_message(message.chat.id, "Очень жаль. Ждем на следующей неделе!")
+    bot.send_message(message.chat.id, "Очень жаль🥺 Ждем на следующей неделе!")
 
 
 def reschedule(message):
@@ -93,7 +94,7 @@ def enter_list(message):
                 'username': message.from_user.first_name
             }}
             file.write(json.dumps(data))
-    bot.send_message(message.chat.id, 'Напоминания установлены')
+    bot.send_message(message.chat.id, 'Напоминания установлены✅')
 
 
 @bot.message_handler(commands=['delete_reminder'])
@@ -110,7 +111,7 @@ def remove_from_list(message):
                 os.remove(REMINDER_LIST_PATH_NAME)
             else:
                 file.write(json.dumps(data))
-    bot.send_message(message.chat.id, 'Напоминания удалено')
+    bot.send_message(message.chat.id, 'Напоминания удалены❎')
 
 
 @bot.message_handler(commands=['in'])
@@ -365,15 +366,23 @@ def do_bot_polling():
 def main():
     print("Starting the bot...")
     init_csv_headers()
+    threads = []
+    notification_thread = threading.Thread(target=job_queue)
+    bot_polling_thread = threading.Thread(target=do_bot_polling)
+    threads.append(notification_thread)
+    threads.append(bot_polling_thread)
 
-    notification_process = Process(target=job_queue)
-    bot_polling_process = Process(target=do_bot_polling)
+    for thread in threads:
+        thread.start()
 
-    bot_polling_process.start()
-    notification_process.start()
+    # notification_process = Process(target=job_queue)
+    # bot_polling_process = Process(target=do_bot_polling)
 
-    notification_process.join()
-    bot_polling_process.join()
+    # notification_process.start()
+    # bot_polling_process.start()
+    #
+    # notification_process.join()
+    # bot_polling_process.join()
 
 
 if __name__ == '__main__':

@@ -16,6 +16,7 @@ token = os.getenv('TOKEN')
 
 bot = TeleBot(token)
 
+test = 1
 nick = 'name'
 REMINDER_LIST_PATH_NAME = 'reminder_list.json'
 RESCHEDULE_LIST_PATH_NAME = 'reschedule.json'

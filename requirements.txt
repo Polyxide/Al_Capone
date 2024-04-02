@@ -2,4 +2,4 @@ pyTelegramBotApi
 requests
 schedule
 python-dotenv
-pandas
+prettytable

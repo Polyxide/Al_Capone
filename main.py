@@ -3,13 +3,12 @@ from telebot import TeleBot
 from telebot import types
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 import csv
-import pandas as pd
 from schedule import every, repeat, run_pending
 import time
 import os
 from dotenv import load_dotenv
-# from multiprocessing import Process, Pool
 import threading
+from prettytable import from_csv
 
 
 load_dotenv()
@@ -23,13 +22,15 @@ RESCHEDULE_LIST_PATH_NAME = 'reschedule.json'
 
 
 def show_saturday(message):
-    df = pd.read_csv('data_list_1.csv')
-    bot.send_message(message.chat.id, str(df))
+    with open("data_list_1.csv") as fp:
+        mytable = from_csv(fp)
+    bot.send_message(message.chat.id, mytable.get_string())
 
 
 def show_sunday(message):
-    df = pd.read_csv('data_list_2.csv')
-    bot.send_message(message.chat.id, str(df))
+    with open("data_list_2.csv") as fp:
+        mytable = from_csv(fp)
+    bot.send_message(message.chat.id, mytable.get_string())
 
 
 def send_sorry_message(message):
@@ -253,12 +254,14 @@ def lst(message):
 
 def show(message):
     if message.text == 'суббота':
-        df = pd.read_csv('data_list_1.csv')
-        bot.send_message(message.chat.id, str(df))
+        with open("data_list_1.csv") as fp:
+            mytable = from_csv(fp)
+        bot.send_message(message.chat.id, mytable.get_string())
 
     elif message.text == 'воскресенье':
-        df = pd.read_csv('data_list_2.csv')
-        bot.send_message(message.chat.id, str(df))
+        with open("data_list_2.csv") as fp:
+            mytable = from_csv(fp)
+        bot.send_message(message.chat.id, mytable.get_string())
 
 
 #######################################################################################

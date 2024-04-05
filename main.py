@@ -364,7 +364,7 @@ def job_queue():
 
 def do_bot_polling():
     print("STARTED")
-    bot.polling()
+    bot.infinity_polling(timeout=10, long_polling_timeout = 5)
 
 
 def main():

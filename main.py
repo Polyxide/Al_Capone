@@ -141,22 +141,25 @@ def registr(message):
 ######################################################################################
 def saturday_nick_func(message):
     if '/' in message.text:
-        bot.send_message(message.chat.id, 'Запись отменена❎')
+        bot.send_message(message.chat.id, 'Запись приостановленна❎')
     else:
         global nick
         nick = str(message.text)
-        bot.send_message(message.chat.id, 'Оставьте ремарку💭')
+        bot.send_message(message.chat.id, 'Как долго планируете играть?')
         bot.register_next_step_handler(message, saturday_remark_func)
 
 
 def saturday_remark_func(message):
-    data_record = str(nick) + ',' + str(message.text) + '\n'
-    with open('data_list_1.csv', mode='a') as file:
-        file.write(data_record)
+    if '/' in message.text:
+        bot.send_message(message.chat.id, 'Запись приостановленна❎')
+    else:
+        data_record = str(nick) + ',' + str(message.text) + '\n'
+        with open('data_list_1.csv', mode='a') as file:
+            file.write(data_record)
 
-    markup_saturday = types.InlineKeyboardMarkup()
-    markup_saturday.add(types.InlineKeyboardButton('Посмотреть список на субботу', callback_data='show_saturday'))
-    bot.send_message(message.chat.id, 'Запись прошла успешно!✅', reply_markup=markup_saturday)
+        markup_saturday = types.InlineKeyboardMarkup()
+        markup_saturday.add(types.InlineKeyboardButton('Посмотреть список на субботу', callback_data='show_saturday'))
+        bot.send_message(message.chat.id, 'Запись прошла успешно!✅', reply_markup=markup_saturday)
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -177,22 +180,25 @@ def call_back(call):
 ####################################################################################
 def sunday_nick_func(message):
     if '/' in message.text:
-        bot.send_message(message.chat.id, 'Запись отменена❎')
+        bot.send_message(message.chat.id, 'Запись приостановленна❎')
     else:
         global nick
         nick = str(message.text)
-        bot.send_message(message.chat.id, 'Оставьте ремарку💭')
+        bot.send_message(message.chat.id, 'Как долго планируете играть?')
         bot.register_next_step_handler(message, sunday_remark_func)
 
 
 def sunday_remark_func(message):
-    data_record = str(nick) + ',' + str(message.text) + '\n'
-    with open('data_list_2.csv', mode='a') as file:
-        file.write(data_record)
+    if '/' in message.text:
+        bot.send_message(message.chat.id, 'Запись приостановленна❎')
+    else:
+        data_record = str(nick) + ',' + str(message.text) + '\n'
+        with open('data_list_2.csv', mode='a') as file:
+            file.write(data_record)
 
-    markup_sunday = types.InlineKeyboardMarkup()
-    markup_sunday.add(types.InlineKeyboardButton('Посмотреть список на воскресенье', callback_data='show_sunday'))
-    bot.send_message(message.chat.id, 'Запись прошла успешно!✅', reply_markup=markup_sunday)
+        markup_sunday = types.InlineKeyboardMarkup()
+        markup_sunday.add(types.InlineKeyboardButton('Посмотреть список на воскресенье', callback_data='show_sunday'))
+        bot.send_message(message.chat.id, 'Запись прошла успешно!✅', reply_markup=markup_sunday)
 
 
 #########################################################################################
@@ -355,12 +361,12 @@ def init_csv_headers():
     if not os.path.isfile('data_list_1.csv'):
         with open('data_list_1.csv', mode='a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow(['Имя', 'Ремарка'])
+            writer.writerow(['Имя', 'Желаемое время игры'])
 
     if not os.path.isfile('data_list_2.csv'):
         with open('data_list_2.csv', mode='a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow(['Имя', 'Ремарка'])
+            writer.writerow(['Имя', 'Желаемое время игры'])
 
 
 def job_queue():

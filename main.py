@@ -130,7 +130,9 @@ def reg(message):
 
 
 def registr(message):
-    if message.text == 'суббота':
+    if '/' in message.text:
+        bot.send_message(message.chat.id, 'Запись приостановленна❎')
+    elif message.text == 'суббота':
         bot.send_message(message.chat.id, 'Введите ваш ник-нейм✅✍️')
         bot.register_next_step_handler(message, saturday_nick_func)
     elif message.text == 'воскресенье':
@@ -217,7 +219,9 @@ def rm(message):
 
 
 def rm_func(message):
-    if message.text == 'суббота':
+    if '/' in message.text:
+        bot.send_message(message.chat.id, 'Удаление приостановленно❎')
+    elif message.text == 'суббота':
         bot.send_message(message.chat.id, 'Введите ваш ник-нейм❎✍️')
         bot.register_next_step_handler(message, saturday_rm)
     elif message.text == 'воскресенье':
@@ -267,11 +271,12 @@ def lst(message):
 
 
 def show(message):
-    if message.text == 'суббота':
+    if '/' in message.text:
+        bot.send_message(message.chat.id, 'Отмена просмотра списка❎')
+    elif message.text == 'суббота':
         with open("data_list_1.csv") as fp:
             mytable = from_csv(fp)
         bot.send_message(message.chat.id, mytable.get_string())
-
     elif message.text == 'воскресенье':
         with open("data_list_2.csv") as fp:
             mytable = from_csv(fp)

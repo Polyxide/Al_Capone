@@ -56,6 +56,7 @@ def reschedule(message):
                 'days_until_notify': 3
             }}
             file.write(json.dumps(data))
+    bot.send_message(message.chat.id, "Напоминания установлены✅")
 
 
 @bot.message_handler(commands=['start', 'menu'])
@@ -139,10 +140,13 @@ def registr(message):
 
 ######################################################################################
 def saturday_nick_func(message):
-    global nick
-    nick = str(message.text)
-    bot.send_message(message.chat.id, 'Оставьте ремарку💭')
-    bot.register_next_step_handler(message, saturday_remark_func)
+    if '/' in message.text:
+        bot.send_message(message.chat.id, 'Запись отменена❎')
+    else:
+        global nick
+        nick = str(message.text)
+        bot.send_message(message.chat.id, 'Оставьте ремарку💭')
+        bot.register_next_step_handler(message, saturday_remark_func)
 
 
 def saturday_remark_func(message):
@@ -172,10 +176,13 @@ def call_back(call):
 
 ####################################################################################
 def sunday_nick_func(message):
-    global nick
-    nick = str(message.text)
-    bot.send_message(message.chat.id, 'Оставьте ремарку💭')
-    bot.register_next_step_handler(message, sunday_remark_func)
+    if '/' in message.text:
+        bot.send_message(message.chat.id, 'Запись отменена❎')
+    else:
+        global nick
+        nick = str(message.text)
+        bot.send_message(message.chat.id, 'Оставьте ремарку💭')
+        bot.register_next_step_handler(message, sunday_remark_func)
 
 
 def sunday_remark_func(message):
